@@ -1,0 +1,1217 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>DAYLUX – Lead Scoring Tool</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --gold: #F5A623;
+    --gold-light: #FFF3D6;
+    --gold-dim: rgba(245,166,35,0.15);
+    --dark: #0D0F14;
+    --card: #161920;
+    --card2: #1D2028;
+    --border: rgba(255,255,255,0.07);
+    --text: #E8EAF0;
+    --muted: #7A8099;
+    --green: #22C55E;
+    --yellow: #EAB308;
+    --red: #EF4444;
+    --blue: #60A5FA;
+    --radius: 14px;
+    --radius-sm: 8px;
+  }
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--dark);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 32px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(13,15,20,0.95);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    backdrop-filter: blur(12px);
+  }
+  .logo { display: flex; align-items: center; gap: 10px; font-size: 17px; font-weight: 800; letter-spacing: -0.3px; }
+  .logo-icon {
+    width: 32px; height: 32px; background: var(--gold);
+    border-radius: 8px; display: flex; align-items: center; justify-content: center;
+    font-size: 16px; color: var(--dark);
+  }
+  .badge-tool {
+    font-size: 11px; font-weight: 700; color: var(--gold);
+    background: var(--gold-dim);
+    border: 1px solid rgba(245,166,35,0.3);
+    padding: 3px 10px; border-radius: 20px; letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+
+  .shell {
+    display: grid;
+    grid-template-columns: 410px 1fr;
+    min-height: calc(100vh - 61px);
+  }
+
+  .sidebar {
+    background: var(--card);
+    border-right: 1px solid var(--border);
+    padding: 22px 20px;
+    position: sticky;
+    top: 61px;
+    height: calc(100vh - 61px);
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .card {
+    background: var(--card2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px 18px;
+  }
+
+  .field-grid { display:grid; gap:10px; grid-template-columns: 1fr; }
+  .field label {
+    display:block; font-size: 11px; font-weight: 800; color: var(--muted);
+    letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px;
+  }
+  .field input, .field select {
+    width: 100%; padding: 11px 12px; border-radius: 10px;
+    background: rgba(255,255,255,0.04); border: 1px solid var(--border);
+    color: var(--text); outline: none;
+  }
+  .field input::placeholder { color: rgba(232,234,240,0.35); }
+
+  .score-display { background: var(--card2); border-radius: var(--radius); padding: 18px; text-align: center; border: 1px solid var(--border); position: relative; overflow:hidden; }
+  .score-display::before {
+    content:''; position:absolute; top:-44px; left:50%; transform:translateX(-50%);
+    width:220px; height:220px; border-radius:50%;
+    background: radial-gradient(circle, rgba(245,166,35,0.14) 0%, transparent 68%);
+    pointer-events:none;
+  }
+  .score-label { font-size: 11px; font-weight: 800; letter-spacing: 1.6px; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+  .score-number { font-size: 72px; font-weight: 900; line-height: 1; font-family: 'JetBrains Mono', monospace; transition: color 0.25s; }
+  .score-max { font-size: 13px; color: var(--muted); margin-top: 4px; }
+  .score-bar-wrap { background: rgba(255,255,255,0.05); border-radius: 99px; height: 8px; margin-top: 16px; overflow:hidden; }
+  .score-bar-fill { height: 100%; border-radius: 99px; width: 0%; transition: width 0.5s cubic-bezier(0.4,0,0.2,1), background 0.25s; }
+
+  .verdict-box { background: var(--card2); border-radius: var(--radius); padding: 14px 16px; border: 1px solid var(--border); }
+  .verdict-label { font-size: 10px; font-weight: 900; letter-spacing: 1.6px; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+  .verdict-icon { font-size: 30px; margin-bottom: 6px; display:block; }
+  .verdict-title { font-size: 16px; font-weight: 900; margin-bottom: 6px; }
+  .verdict-desc { font-size: 12px; color: var(--muted); line-height: 1.6; }
+
+  .breakdown-title { font-size: 11px; font-weight: 900; letter-spacing: 1.2px; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; }
+  .breakdown-item { display:flex; align-items:center; justify-content:space-between; padding: 7px 0; border-bottom: 1px solid var(--border); font-size:12px; }
+  .breakdown-item:last-child { border-bottom:none; }
+  .breakdown-cat { color: var(--text); display:flex; align-items:center; gap:8px; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; }
+  .breakdown-pts { font-family:'JetBrains Mono', monospace; font-size:12px; font-weight:700; opacity:0.85; }
+
+  .btn {
+    width: 100%; padding: 12px 14px; border-radius: var(--radius-sm);
+    border: none; cursor:pointer; font-weight: 900; letter-spacing: 0.2px;
+    transition: transform 0.15s, opacity 0.2s;
+  }
+  .btn-primary { background: var(--gold); color: var(--dark); }
+  .btn-primary:hover { opacity: 0.92; transform: translateY(-1px); }
+  .btn-secondary {
+    background: transparent; color: var(--muted);
+    border: 1px solid var(--border);
+  }
+  .btn-secondary:hover { border-color: rgba(255,255,255,0.18); color: var(--text); }
+
+  .main { padding: 28px 36px; overflow-y:auto; max-height: calc(100vh - 61px); }
+  .page-title { font-size: 26px; font-weight: 950; letter-spacing: -0.6px; margin-bottom: 6px; }
+  .page-subtitle { font-size: 14px; color: var(--muted); margin-bottom: 24px; line-height: 1.6; }
+
+  .tier-legend { display:grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 26px; }
+  .tier-card { border-radius: var(--radius); padding: 16px; border: 1px solid var(--border); }
+  .tier-card.t-vip { border-color: rgba(34,197,94,0.35); background: rgba(34,197,94,0.05); }
+  .tier-card.t-mid { border-color: rgba(234,179,8,0.35); background: rgba(234,179,8,0.05); }
+  .tier-card.t-std { border-color: rgba(239,68,68,0.28); background: rgba(239,68,68,0.04); }
+  .tier-icon { font-size: 24px; margin-bottom: 6px; display:block; }
+  .tier-name { font-size: 13px; font-weight: 950; margin-bottom: 4px; }
+  .tier-range { font-size: 11px; font-weight: 800; font-family:'JetBrains Mono', monospace; opacity:0.75; margin-bottom: 6px; }
+  .tier-desc { font-size: 11px; color: var(--muted); line-height: 1.5; }
+
+  .category { margin-bottom: 26px; }
+  .cat-header { display:flex; align-items:center; gap:12px; margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+  .cat-icon { width: 38px; height: 38px; border-radius: 10px; display:flex; align-items:center; justify-content:center; font-size: 16px; flex-shrink:0; }
+  .cat-name { font-size: 15px; font-weight: 950; }
+  .cat-meta { font-size: 11px; color: var(--muted); margin-top: 2px; display:flex; align-items:center; gap:8px; }
+  .cat-weight { background: var(--gold-dim); color: var(--gold); padding: 1px 7px; border-radius: 20px; font-weight: 800; }
+
+  .question-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 16px;
+    margin-bottom: 12px;
+  }
+  .question-card.answered { border-color: rgba(245,166,35,0.25); }
+  .q-top { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom: 10px; }
+  .q-text { font-size: 14px; font-weight: 850; line-height: 1.5; flex:1; }
+  .q-hint { font-size: 11px; color: var(--muted); margin-top: 3px; font-weight: 450; font-style: italic; }
+  .q-badge { font-size: 10px; font-weight: 950; padding: 3px 8px; border-radius: 20px; white-space: nowrap; flex-shrink:0; }
+  .subtle-badge { background: rgba(96,165,250,0.1); color: var(--blue); border: 1px solid rgba(96,165,250,0.2); }
+  .direct-badge { background: rgba(245,166,35,0.1); color: var(--gold); border: 1px solid rgba(245,166,35,0.2); }
+
+  .options-grid { display:grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .options-grid.cols1 { grid-template-columns: 1fr; }
+
+  .opt-btn {
+    padding: 10px 12px; border-radius: var(--radius-sm);
+    background: var(--card2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-size: 12px; font-weight: 600; cursor:pointer;
+    text-align:left; transition: all 0.2s;
+    display:flex; align-items:center; justify-content:space-between; gap:8px;
+    font-family:'Inter', sans-serif;
+  }
+  .opt-btn:hover { border-color: rgba(245,166,35,0.45); background: rgba(245,166,35,0.05); }
+  .opt-btn.selected { border-color: var(--gold); background: var(--gold-dim); color: var(--gold); }
+  .opt-pts { font-family:'JetBrains Mono', monospace; font-size: 11px; font-weight: 800; opacity:0.65; white-space:nowrap; }
+  .opt-btn.selected .opt-pts { opacity: 1; }
+
+  .script-section { margin-top: 6px; }
+  .script-toggle {
+    width:100%; display:flex; align-items:center; justify-content:space-between;
+    padding: 16px 18px; border-radius: var(--radius);
+    background: var(--card2); border: 1px solid var(--border);
+    cursor:pointer; font-weight: 900; color: var(--text);
+  }
+  .script-toggle.open { border-bottom-left-radius:0; border-bottom-right-radius:0; }
+  .script-body { display:none; background: var(--card2); border: 1px solid var(--border); border-top:none; border-bottom-left-radius: var(--radius); border-bottom-right-radius: var(--radius); padding: 18px; }
+  .script-body.open { display:block; }
+  .script-line { display:flex; gap:12px; margin-bottom: 12px; }
+  .script-line:last-child { margin-bottom:0; }
+  .script-who { font-size:10px; font-weight: 950; text-transform: uppercase; letter-spacing: 0.8px; padding: 2px 8px; border-radius: 20px; height: fit-content; margin-top: 2px; }
+  .you { background: rgba(245,166,35,0.15); color: var(--gold); border: 1px solid rgba(245,166,35,0.3); }
+  .tip-label { background: rgba(96,165,250,0.1); color: var(--blue); border: 1px solid rgba(96,165,250,0.2); }
+  .script-text { font-size: 13px; color: var(--text); line-height: 1.65; }
+  .script-text em { color: var(--muted); font-style: italic; }
+
+  .overlay { display:none; position:fixed; inset:0; background: rgba(0,0,0,0.75); z-index:200; align-items:center; justify-content:center; backdrop-filter: blur(6px); padding: 18px; }
+  .overlay.show { display:flex; }
+  .modal { background: var(--card); border: 1px solid var(--border); border-radius: 20px; padding: 28px 26px; max-width: 620px; width: 100%; position: relative; }
+  .modal-close { position:absolute; top: 14px; right: 14px; width: 34px; height: 34px; background: var(--card2); border: 1px solid var(--border); border-radius: 10px; cursor:pointer; color: var(--muted); font-size: 16px; display:flex; align-items:center; justify-content:center; }
+  .modal-close:hover { color: var(--text); }
+  .modal-score-big { font-size: 84px; font-weight: 950; font-family:'JetBrains Mono', monospace; line-height:1; margin-bottom: 8px; }
+  .modal-title { font-size: 22px; font-weight: 950; margin-bottom: 10px; }
+  .modal-desc { font-size: 14px; color: var(--muted); line-height: 1.75; margin-bottom: 18px; }
+  .modal-actions { display:flex; flex-wrap:wrap; gap:10px; }
+  .modal-tag { padding: 9px 12px; background: var(--card2); border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 12px; font-weight: 800; display:flex; align-items:center; gap:8px; }
+
+  @media (max-width: 980px) {
+    .shell { grid-template-columns: 1fr; }
+    .sidebar { position: static; height:auto; }
+    .main { max-height:none; }
+    .tier-legend { grid-template-columns: 1fr; }
+    .options-grid { grid-template-columns: 1fr; }
+  }
+
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 99px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.22); }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo"><div class="logo-icon">⚡</div> DAYLUX</div>
+  <span class="badge-tool">Lead Scoring Tool</span>
+</header>
+
+<div class="shell">
+  <aside class="sidebar">
+
+    <!-- Kundendaten -->
+    <div class="card">
+      <div class="breakdown-title" style="margin-bottom: 12px;">Kundendaten (für PDF)</div>
+      <div class="field-grid">
+        <div class="field">
+          <label for="f_name">Name</label>
+          <input id="f_name" placeholder="Max Mustermann" />
+        </div>
+        <div class="field">
+          <label for="f_addr">Adresse</label>
+          <input id="f_addr" placeholder="Straße, PLZ Ort" />
+        </div>
+        <div class="field">
+          <label for="f_phone">Telefon</label>
+          <input id="f_phone" placeholder="0176 12345678" />
+        </div>
+        <div class="field">
+          <label for="f_modules">Wunsch-Umfang (Module)</label>
+          <select id="f_modules">
+            <option value="pv-only" selected>nur PV</option>
+            <option value="pv-storage">PV + Speicher</option>
+            <option value="pv-ev">PV + Wallbox/E-Auto</option>
+            <option value="pv-hp">PV + Wärmepumpe</option>
+            <option value="full">PV + Speicher + Wallbox + WP/Klima</option>
+            <option value="unknown">noch unklar</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="f_notes">Notiz (1 Satz)</label>
+          <input id="f_notes" placeholder="z.B. Dachausrichtung unklar, Termin gewünscht" />
+        </div>
+      </div>
+    </div>
+
+    <div class="score-display">
+      <div class="score-label">Lead Score</div>
+      <div class="score-number" id="scoreNum">0</div>
+      <div class="score-max">von 100 Punkten</div>
+      <div class="score-bar-wrap"><div class="score-bar-fill" id="scoreBar"></div></div>
+    </div>
+
+    <div class="verdict-box" id="verdictBox">
+      <div class="verdict-label">Einstufung</div>
+      <span class="verdict-icon" id="verdictIcon">⬜</span>
+      <div class="verdict-title" id="verdictTitle">Noch keine Antworten</div>
+      <div class="verdict-desc" id="verdictDesc">Klicke die Antworten an – dann bekommst du eine klare Empfehlung.</div>
+    </div>
+
+    <div class="card" style="padding: 14px 16px;">
+      <div class="breakdown-title" style="margin-bottom: 10px;">Punkte nach Kategorie</div>
+      <div class="breakdown-item"><span class="breakdown-cat"><span class="dot" style="background:#60A5FA"></span>Objekt & Machbarkeit</span><span class="breakdown-pts" id="bp1">0 / 25</span></div>
+      <div class="breakdown-item"><span class="breakdown-cat"><span class="dot" style="background:#22C55E"></span>Kauf-/Termin-Signal</span><span class="breakdown-pts" id="bp2">0 / 25</span></div>
+      <div class="breakdown-item"><span class="breakdown-cat"><span class="dot" style="background:#EAB308"></span>Budget & Invest</span><span class="breakdown-pts" id="bp3">0 / 20</span></div>
+      <div class="breakdown-item"><span class="breakdown-cat"><span class="dot" style="background:#A78BFA"></span>Entscheider & Timing</span><span class="breakdown-pts" id="bp4">0 / 20</span></div>
+      <div class="breakdown-item"><span class="breakdown-cat"><span class="dot" style="background:#FB7185"></span>Modul-Treffer (Wunschumfang)</span><span class="breakdown-pts" id="bp5">0 / 15</span></div>
+    </div>
+
+    <button class="btn btn-primary" onclick="showResult()">📊 Auswertung anzeigen</button>
+    <button class="btn btn-secondary" onclick="resetAll()">↺ Zurücksetzen</button>
+  </aside>
+
+  <main class="main">
+    <h1 class="page-title">Lead-Qualifizierung am Telefon</h1>
+    <p class="page-subtitle">Für Karin/Sandro: keine Technik nötig. Du wählst nur die passende Antwort (subtil oder direkt). Der Score entscheidet: <b>Standortangebot</b> oder <b>mehr Aufmerksamkeit + Termin</b> – immer subjektiv, aber strukturiert.</p>
+
+    <div class="tier-legend">
+      <div class="tier-card t-vip">
+        <span class="tier-icon">🔥</span>
+        <div class="tier-name" style="color:#22C55E">Premium Lead</div>
+        <div class="tier-range" style="color:#22C55E">70–100</div>
+        <div class="tier-desc">Vor-Ort-/Aufmaß-Termin aktiv setzen. Persönliche Betreuung.</div>
+      </div>
+      <div class="tier-card t-mid">
+        <span class="tier-icon">⚡</span>
+        <div class="tier-name" style="color:#EAB308">Standard Plus</div>
+        <div class="tier-range" style="color:#EAB308">40–69</div>
+        <div class="tier-desc">Video-/Telefon-Beratung. Standardangebot + Optionen. Nachfassen.</div>
+      </div>
+      <div class="tier-card t-std">
+        <span class="tier-icon">📄</span>
+        <div class="tier-name" style="color:#EF4444">Standortangebot</div>
+        <div class="tier-range" style="color:#EF4444">0–39</div>
+        <div class="tier-desc">Automatisiert senden. Kein Termin ohne positives Signal.</div>
+      </div>
+    </div>
+
+    <!-- Qs -->
+    <!-- Kategorie 1 -->
+    <section class="category">
+      <div class="cat-header">
+        <div class="cat-icon" style="background:rgba(96,165,250,0.1); color:#60A5FA;">🏠</div>
+        <div class="cat-info">
+          <div class="cat-name">Objekt & Machbarkeit</div>
+          <div class="cat-meta"><span class="cat-weight">25 Punkte</span><span>Kann DAYLUX hier sinnvoll liefern?</span></div>
+        </div>
+      </div>
+
+      <div class="question-card" id="qcard-q1">
+        <div class="q-top">
+          <div>
+            <div class="q-text">Dach: grundsätzlich geeignet?</div>
+            <div class="q-hint">Subtil: „Hat Ihr Haus tagsüber viel Sonne oder gibt es starke Verschattung?“</div>
+          </div>
+          <span class="q-badge subtle-badge">💬 Subtil</span>
+        </div>
+        <div class="options-grid cols1" id="opts-q1">
+          <button class="opt-btn" onclick="answer('q1',10,'cat1','Ja, klare PV-Fläche vorhanden')">✅ Ja, PV-Fläche vorhanden <span class="opt-pts">+10</span></button>
+          <button class="opt-btn" onclick="answer('q1',6,'cat1','Teilweise geeignet')">🔶 Teilweise geeignet (unklar/teilverschattet) <span class="opt-pts">+6</span></button>
+          <button class="opt-btn" onclick="answer('q1',2,'cat1','Eher schwierig')">⚠️ Eher schwierig (viel Schatten/eng) <span class="opt-pts">+2</span></button>
+          <button class="opt-btn" onclick="answer('q1',0,'cat1','Sehr wahrscheinlich nicht')">❌ Vermutlich nicht passend <span class="opt-pts">+0</span></button>
+        </div>
+      </div>
+
+      <div class="question-card" id="qcard-q2">
+        <div class="q-top">
+          <div>
+            <div class="q-text">Dach/Zustand & nächste Schritte</div>
+            <div class="q-hint">Direkt: „Ist das Dach in gutem Zustand oder gibt es eine Sanierung in den nächsten 12–24 Monaten?“</div>
+          </div>
+          <span class="q-badge direct-badge">🎯 Direkt</span>
+        </div>
+        <div class="options-grid cols1" id="opts-q2">
+          <button class="opt-btn" onclick="answer('q2',10,'cat1','Kein Dachthema')">✅ Kein Dachthema, bereit <span class="opt-pts">+10</span></button>
+          <button class="opt-btn" onclick="answer('q2',6,'cat1','Dach älter, aber geplant')">🔶 Dach älter, Sanierung geplant <span class="opt-pts">+6</span></button>
+          <button class="opt-btn" onclick="answer('q2',2,'cat1','Unklar/noch zu prüfen')">⚠️ Unklar, muss geprüft werden <span class="opt-pts">+2</span></button>
+          <button class="opt-btn" onclick="answer('q2',0,'cat1','Sanierung sehr bald')">❌ Sanierung steht bald fest <span class="opt-pts">+0</span></button>
+        </div>
+      </div>
+
+      <div class="question-card" id="qcard-q3">
+        <div class="q-top">
+          <div>
+            <div class="q-text">Strombedarf / Nutzen-Fit</div>
+            <div class="q-hint">Direkt: „Wie hoch ist ungefähr Ihr jährlicher Stromverbrauch (grob)?“</div>
+          </div>
+          <span class="q-badge direct-badge">🎯 Direkt</span>
+        </div>
+        <div class="options-grid cols1" id="opts-q3">
+          <button class="opt-btn" onclick="answer('q3',5,'cat1','>2.500 kWh oder EV/WP')">✅ Hoch / EV oder WP vorhanden <span class="opt-pts">+5</span></button>
+          <button class="opt-btn" onclick="answer('q3',3,'cat1','1.500–2.500 kWh')">🔶 Mittel (1.500–2.500 kWh) <span class="opt-pts">+3</span></button>
+          <button class="opt-btn" onclick="answer('q3',1,'cat1','<1.500 kWh')">⚠️ Niedrig (<1.500 kWh) <span class="opt-pts">+1</span></button>
+          <button class="opt-btn" onclick="answer('q3',0,'cat1','Unbekannt')">❌ Weiß nicht <span class="opt-pts">+0</span></button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Kategorie 2 -->
+    <section class="category">
+      <div class="cat-header">
+        <div class="cat-icon" style="background:rgba(34,197,94,0.1); color:#22C55E;">🎯</div>
+        <div class="cat-info">
+          <div class="cat-name">Kauf-/Termin-Signal</div>
+          <div class="cat-meta"><span class="cat-weight">25 Punkte</span><span>Wie stark ist der Drang, jetzt zu entscheiden?</span></div>
+        </div>
+      </div>
+
+      <div class="question-card" id="qcard-q4">
+        <div class="q-top">
+          <div>
+            <div class="q-text">Reaktion auf Terminvorschlag</div>
+            <div class="q-hint">Direkt: „Wenn ich Ihnen heute einen Terminvorschlag mache – passt das grundsätzlich?“</div>
+          </div>
+          <span class="q-badge direct-badge">🎯 Direkt</span>
+        </div>
+        <div class="options-grid cols1" id="opts-q4">
+          <button class="opt-btn" onclick="answer('q4',10,'cat2','Zugestimmt / Termin fest')">🔥 Ja, Termin möglich / fest <span class="opt-pts">+10</span></button>
+          <button class="opt-btn" onclick="answer('q4',6,'cat2','Muss kurz abstimmen')">⏳ Muss kurz abstimmen, grundsätzlich ja <span class="opt-pts">+6</span></button>
+          <button class="opt-btn" onclick="answer('q4',3,'cat2','Zögerlich (nur Info schicken)')">🔶 Eher zögerlich („schicken Sie erstmal was“) <span class="opt-pts">+3</span></button>
+          <button class="opt-btn" onclick="answer('q4',0,'cat2','Abwehr / kein Interesse')">❌ Abwehr / kein Interesse <span class="opt-pts">+0</span></button>
+        </div>
+      </div>
+
+      <div class="question-card" id="qcard-q5">
+        <div class="q-top">
+          <div>
+            <div class="q-text">Worum geht es konkret?</div>
+            <div class="q-hint">Subtil: „Was wäre für Sie das ideale Ergebnis – nur PV oder auch Speicher/Wallbox/WP?“</div>
+          </div>
+          <span class="q-badge subtle-badge">💬 Subtil</span>
+        </div>
+        <div class="options-grid cols1" id="opts-q5">
+          <button class="opt-btn" onclick="answer('q5',8,'cat2','Konkreter Plan + Fragen')">✅ Konkreter Plan + konkrete Fragen <span class="opt-pts">+8</span></button>
+          <button class="opt-btn" onclick="answer('q5',5,'cat2','Interesse vorhanden, Details offen')">🔶 Interesse ja, Details offen <span class="opt-pts">+5</span></button>
+          <button class="opt-btn" onclick="answer('q5',2,'cat2','Nur „mal schauen“')">⚠️ Nur „mal schauen“ <span class="opt-pts">+2</span></button>
+          <button class="opt-btn" onclick="answer('q5',0,'cat2','Rein allgemeine Infos')">❌ Rein allgemeines Interesse <span class="opt-pts">+0</span></button>
+        </div>
+      </div>
+
+      <div class="question-card" id="qcard-q6">
+        <div class="q-top">
+          <div>
+            <div class="q-text">Wieviele Anbieter sind im Rennen?</div>
+            <div class="q-hint">Direkt: „Planen Sie bei sich gerade Angebote von mehreren Firmen?“</div>
+          </div>
+          <span class="q-badge direct-badge">🎯 Direkt</span>
+        </div>
+        <div class="options-grid cols1" id="opts-q6">
+          <button class="opt-btn" onclick="answer('q6',7,'cat2','Nur 1–2 Anbieter')">✅ 1–2 Anbieter <span class="opt-pts">+7</span></button>
+          <button class="opt-btn" onclick="answer('q6',4,'cat2','3–4 Anbieter')">🔶 3–4 Anbieter <span class="opt-pts">+4</span></button>
+          <button class="opt-btn" onclick="answer('q6',1,'cat2','Viele Anbieter (Preis-Tour)')">⚠️ Viele Anbieter, Preisfokus <span class="opt-pts">+1</span></button>
+          <button class="opt-btn" onclick="answer('q6',0,'cat2','Unbekannt / unklar')">❌ Unklar <span class="opt-pts">+0</span></button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Kategorie 3 -->
+    <section class="category">
+      <div class="cat-header">
+        <div class="cat-icon" style="background:rgba(234,179,8,0.1); color:#EAB308;">💰</div>
+        <div class="cat-info">
+          <div class="cat-name">Budget & Invest</div>
+          <div class="cat-meta"><span class="cat-weight" style="background:rgba(234,179,8,0.14); color:#EAB308;">20 Punkte</span><span>Kann der Kunde grundsätzlich investieren?</span></div>
+        </div>
+      </div>
+
+      <div class="question-card" id="qcard-q7">
+        <div class="q-top">
+          <div>
+            <div class="q-text">Budgetsignal</div>
+            <div class="q-hint">Subtil: „Wie ist das bei Ihnen geplant – eher selbst finanzieren oder über Finanzierung nachdenken?“</div>
+          </div>
+          <span class="q-badge subtle-badge">💬 Subtil</span>
+        </div>
+        <div class="options-grid cols1" id="opts-q7">
+          <button class="opt-btn" onclick="answer('q7',9,'cat3','Eigenmittel/finanzierungsbereit')">💎 Eigenmittel oder Finanzierung klar <span class="opt-pts">+9</span></button>
+          <button class="opt-btn" onclick="answer('q7',6,'cat3','Budget muss noch geprüft werden')">🔶 Budget muss noch geprüft werden <span class="opt-pts">+6</span></button>
+          <button class="opt-btn" onclick="answer('q7',2,'cat3','Sehr preisgetrieben')">⚠️ Sehr preisgetrieben / möchte „möglichst günstig“ <span class="opt-pts">+2</span></button>
+          <button class="opt-btn" onclick="answer('q7',0,'cat3','Kein Budget/abgebremst')">❌ Abgebremst („geht nicht“) <span class="opt-pts">+0</span></button>
+        </div>
+      </div>
+
+      <div class="question-card" id="qcard-q8">
+        <div class="q-top">
+          <div>
+            <div class="q-text">„Modul-Power“ im Wunsch</div>
+            <div class="q-hint">Direkt: „Wenn Sie PV machen – wäre Speicher/Wallbox/WP auch ein Thema, oder nur PV?“</div>
+          </div>
+          <span class="q-badge direct-badge">🎯 Direkt</span>
+        </div>
+        <div class="options-grid cols1" id="opts-q8">
+          <button class="opt-btn" onclick="answer('q8',6,'cat3','Ja, mehrere Module gewünscht')">✅ Mehrere Module gewünscht <span class="opt-pts">+6</span></button>
+          <button class="opt-btn" onclick="answer('q8',4,'cat3','Vielleicht 1 Zusatzmodul')">🔶 Vielleicht 1 Zusatz <span class="opt-pts">+4</span></button>
+          <button class="opt-btn" onclick="answer('q8',2,'cat3','Nur PV reicht')">⚠️ Nur PV <span class="opt-pts">+2</span></button>
+          <button class="opt-btn" onclick="answer('q8',0,'cat3','Unsicher')">❌ Unsicher / keine Aussage <span class="opt-pts">+0</span></button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Kategorie 4 -->
+    <section class="category">
+      <div class="cat-header">
+        <div class="cat-icon" style="background:rgba(167,139,250,0.1); color:#A78BFA;">👑</div>
+        <div class="cat-info">
+          <div class="cat-name">Entscheider & Timing</div>
+          <div class="cat-meta"><span class="cat-weight" style="background:rgba(167,139,250,0.14); color:#A78BFA;">20 Punkte</span><span>Wer entscheidet – und bis wann?</span></div>
+        </div>
+      </div>
+
+      <div class="question-card" id="qcard-q9">
+        <div class="q-top">
+          <div>
+            <div class="q-text">Entscheider greifbar?</div>
+            <div class="q-hint">Direkt: „Entscheiden Sie das allein oder ist noch jemand involviert?“</div>
+          </div>
+          <span class="q-badge direct-badge">🎯 Direkt</span>
+        </div>
+        <div class="options-grid cols1" id="opts-q9">
+          <button class="opt-btn" onclick="answer('q9',10,'cat4','Klare Entscheidungsperson')">👑 Entscheidet direkt / allein <span class="opt-pts">+10</span></button>
+          <button class="opt-btn" onclick="answer('q9',6,'cat4','Partner/Familie muss mit')">👫 Partner/Familie muss mit <span class="opt-pts">+6</span></button>
+          <button class="opt-btn" onclick="answer('q9',2,'cat4','Mehrere Entscheider')">🏢 Mehrere Entscheider/Gremium <span class="opt-pts">+2</span></button>
+          <button class="opt-btn" onclick="answer('q9',0,'cat4','Unklar / keine Entscheidung')">❌ Unklar / kein Entscheider <span class="opt-pts">+0</span></button>
+        </div>
+      </div>
+
+      <div class="question-card" id="qcard-q10">
+        <div class="q-top">
+          <div>
+            <div class="q-text">Zeithorizont</div>
+            <div class="q-hint">Direkt: „Wann möchten Sie, dass die Anlage läuft?“</div>
+          </div>
+          <span class="q-badge direct-badge">🎯 Direkt</span>
+        </div>
+        <div class="options-grid cols1" id="opts-q10">
+          <button class="opt-btn" onclick="answer('q10',6,'cat4','0–3 Monate')">🔥 0–3 Monate <span class="opt-pts">+6</span></button>
+          <button class="opt-btn" onclick="answer('q10',4,'cat4','3–6 Monate')">⚡ 3–6 Monate <span class="opt-pts">+4</span></button>
+          <button class="opt-btn" onclick="answer('q10',1,'cat4','6–12+ Monate')">🕐 6–12+ Monate <span class="opt-pts">+1</span></button>
+          <button class="opt-btn" onclick="answer('q10',0,'cat4','Unbestimmt')">❌ Unbestimmt <span class="opt-pts">+0</span></button>
+        </div>
+      </div>
+
+      <div class="question-card" id="qcard-q11">
+        <div class="q-top">
+          <div>
+            <div class="q-text">„To-Do“ schon gemacht?</div>
+            <div class="q-hint">Subtil: „Welche Vorbereitung gibt es schon – Zähler/EVU, Zieldach, Unterlagen?“</div>
+          </div>
+          <span class="q-badge subtle-badge">💬 Subtil</span>
+        </div>
+        <div class="options-grid cols1" id="opts-q11">
+          <button class="opt-btn" onclick="answer('q11',4,'cat4','Schon Unterlagen/Plan')">✅ Schon vorbereitet (Unterlagen/Plan) <span class="opt-pts">+4</span></button>
+          <button class="opt-btn" onclick="answer('q11',3,'cat4','Erste Infos vorhanden')">🔶 Erste Infos vorhanden <span class="opt-pts">+3</span></button>
+          <button class="opt-btn" onclick="answer('q11',1,'cat4','Noch gar nichts')">⚠️ Noch gar nichts <span class="opt-pts">+1</span></button>
+          <button class="opt-btn" onclick="answer('q11',0,'cat4','Keine Antwort')">❌ Keine Aussage <span class="opt-pts">+0</span></button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Kategorie 5 -->
+    <section class="category">
+      <div class="cat-header">
+        <div class="cat-icon" style="background:rgba(251,113,133,0.1); color:#FB7185;">🚀</div>
+        <div class="cat-info">
+          <div class="cat-name">Modul-Treffer (Wunschumfang)</div>
+          <div class="cat-meta"><span class="cat-weight" style="background:rgba(251,113,133,0.14); color:#FB7185;">15 Punkte</span><span>Hier testen wir auch: zu wenig Module?</span></div>
+        </div>
+      </div>
+
+      <div class="question-card" id="qcard-q12">
+        <div class="q-top">
+          <div>
+            <div class="q-text">Klarer Wunschumfang (Modul-Check)</div>
+            <div class="q-hint">Direkt: „Wären Sie offen, PV + Speicher/Wallbox/WP als Paket zu machen – falls es passt?“</div>
+          </div>
+          <span class="q-badge direct-badge">🎯 Direkt</span>
+        </div>
+        <div class="options-grid cols1" id="opts-q12">
+          <button class="opt-btn" onclick="answer('q12',7,'cat5','Ja: Paket gewünscht')">✅ Ja: Paket gewünscht <span class="opt-pts">+7</span></button>
+          <button class="opt-btn" onclick="answer('q12',4,'cat5','Nur 1 Zusatzmodul möglich')">🔶 1 Zusatzmodul möglich <span class="opt-pts">+4</span></button>
+          <button class="opt-btn" onclick="answer('q12',1,'cat5','Nur PV gewünscht')">⚠️ Nur PV <span class="opt-pts">+1</span></button>
+          <button class="opt-btn" onclick="answer('q12',0,'cat5','Noch unklar')">❌ Noch unklar <span class="opt-pts">+0</span></button>
+        </div>
+      </div>
+
+      <div class="question-card" id="qcard-q13">
+        <div class="q-top">
+          <div>
+            <div class="q-text">„Entscheidend“: Kunde will mehr als Standort-PV?</div>
+            <div class="q-hint">Subtil: „Was wäre Ihnen wichtiger: schnell PV oder das große Gesamtpaket?“</div>
+          </div>
+          <span class="q-badge subtle-badge">💬 Subtil</span>
+        </div>
+        <div class="options-grid cols1" id="opts-q13">
+          <button class="opt-btn" onclick="answer('q13',8,'cat5','Gesamtpaket ist Thema')">🔥 Gesamtpaket ist Thema <span class="opt-pts">+8</span></button>
+          <button class="opt-btn" onclick="answer('q13',5,'cat5','Teilweise offen')">🔶 Teilweise offen <span class="opt-pts">+5</span></button>
+          <button class="opt-btn" onclick="answer('q13',2,'cat5','Eher PV-first')">⚠️ Eher PV-first <span class="opt-pts">+2</span></button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Leitfaden -->
+    <div class="script-section">
+      <button class="script-toggle" id="scriptToggle" onclick="toggleScript()">
+        <span>📞 Mini-Gesprächsleitfaden (Karin/Sandro-freundlich)</span>
+        <span id="scriptArrow">▼</span>
+      </button>
+      <div class="script-body" id="scriptBody">
+        <div class="script-line">
+          <span class="script-who you">Du</span>
+          <span class="script-text">„Damit ich Ihnen ein passendes Angebot machen kann: Wie ist Ihr Haus grundsätzlich – Einfamilienhaus oder Doppelhaus?“</span>
+        </div>
+        <div class="script-line">
+          <span class="script-who tip-label">💡 Tipp</span>
+          <span class="script-text">Wenn du merkst, der Kunde will mehr als PV, sag als Nächstes: „Dann machen wir das als Paket-Check, ja?“</span>
+        </div>
+        <div class="script-line">
+          <span class="script-who you">Du</span>
+          <span class="script-text">„Gibt es starke Verschattung oder ist das Dach tagsüber meist gut sonnig?“ <em>(liefert Machbarkeit ohne Technik)</em></span>
+        </div>
+        <div class="script-line">
+          <span class="script-who you">Du</span>
+          <span class="script-text">„Wie wäre es, wenn wir das in einem Termin einmal sauber prüfen: PV alleine oder direkt PV + Speicher + Wallbox/Wärmepumpe?“</span>
+        </div>
+        <div class="script-line">
+          <span class="script-who tip-label">💡 Red Flags</span>
+          <span class="script-text">Viele Unterbrechungen zu „dem billigsten Preis“, kein Termin jemals, und keine echten Antworten auf „Was ist Ihr Ziel?“ → eher Standortangebot.</span>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- RESULT -->
+<div class="overlay" id="resultOverlay">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <div class="modal-score-big" id="modalScore">0</div>
+    <div class="modal-title" id="modalTitle">–</div>
+    <div class="modal-desc" id="modalDesc">–</div>
+    <div class="modal-actions" id="modalActions"></div>
+
+    <div style="margin-top:18px; font-size:12px; color:var(--muted); line-height:1.6;">
+      <b>PDF-Tipp:</b> Browser-Print → „Als PDF speichern“. Alle Kundendaten stehen oben.
+    </div>
+  </div>
+</div>
+
+<script>
+  const answers = {};
+  const catTotals = { cat1: 0, cat2: 0, cat3: 0, cat4: 0, cat5: 0 };
+  const catMax    = { cat1: 25, cat2: 25, cat3: 20, cat4: 20, cat5: 15 };
+
+  function totalScore() {
+    return Object.values(catTotals).reduce((a,b)=>a+b,0);
+  }
+
+  function updateBreakdown() {
+    document.getElementById('bp1').textContent = catTotals.cat1 + ' / ' + catMax.cat1;
+    document.getElementById('bp2').textContent = catTotals.cat2 + ' / ' + catMax.cat2;
+    document.getElementById('bp3').textContent = catTotals.cat3 + ' / ' + catMax.cat3;
+    document.getElementById('bp4').textContent = catTotals.cat4 + ' / ' + catMax.cat4;
+    document.getElementById('bp5').textContent = catTotals.cat5 + ' / ' + catMax.cat5;
+  }
+
+  function updateScoreBar() {
+    const score = totalScore();
+    const pct = score / 100;
+    const scoreNum = document.getElementById('scoreNum');
+    const scoreBar = document.getElementById('scoreBar');
+
+    let color = 'var(--muted)';
+    let bar = 'var(--muted)';
+
+    if (score >= 70) { color = '#22C55E'; bar = '#22C55E'; }
+    else if (score >= 40) { color = '#EAB308'; bar = '#EAB308'; }
+    else if (score > 0) { color = '#EF4444'; bar = '#EF4444'; }
+
+    scoreNum.textContent = score;
+    scoreNum.style.color = color;
+    scoreBar.style.width = (pct*100) + '%';
+    scoreBar.style.background = bar;
+
+    // verdict
+    const verdictIcon = document.getElementById('verdictIcon');
+    const verdictTitle = document.getElementById('verdictTitle');
+    const verdictDesc = document.getElementById('verdictDesc');
+    const verdictBox = document.getElementById('verdictBox');
+
+    const answered = Object.keys(answers).length;
+    if (answered === 0) {
+      verdictIcon.textContent = '⬜';
+      verdictTitle.textContent = 'Noch keine Antworten';
+      verdictDesc.textContent = 'Klicke die Antworten an – dann bekommst du eine klare Empfehlung.';
+      verdictBox.style.borderColor = 'var(--border)';
+      return;
+    }
+
+    if (score >= 70) {
+      verdictIcon.textContent = '🔥';
+      verdictTitle.textContent = 'Premium Lead';
+      verdictTitle.style.color = '#22C55E';
+      verdictDesc.textContent = 'Aktiv Termin setzen (Aufmaß/Vor-Ort). Individuelles Konzept. Priorisieren.';
+      verdictBox.style.borderColor = 'rgba(34,197,94,0.35)';
+    } else if (score >= 40) {
+      verdictIcon.textContent = '⚡';
+      verdictTitle.textContent = 'Standard Plus';
+      verdictTitle.style.color = '#EAB308';
+      verdictDesc.textContent = 'Video-/Telefon-Beratung. Standardangebot + 1–2 Optionen. In 3 Tagen nachfassen.';
+      verdictBox.style.borderColor = 'rgba(234,179,8,0.35)';
+    } else {
+      verdictIcon.textContent = '📄';
+      verdictTitle.textContent = 'Standortangebot';
+      verdictTitle.style.color = '#EF4444';
+      verdictDesc.textContent = 'Automatisiertes Angebot. Kein Termin ohne Rückmeldung. Nur einmal nachfassen.';
+      verdictBox.style.borderColor = 'rgba(239,68,68,0.28)';
+    }
+  }
+
+  function answer(qid, pts, cat, label) {
+    const prev = answers[qid];
+    if (prev) catTotals[cat] -= prev.pts;
+
+    answers[qid] = { qid, pts, cat, label };
+    catTotals[cat] += pts;
+
+    // deselect in group
+    document.querySelectorAll(`#opts-${qid} .opt-btn`).forEach(b=>b.classList.remove('selected'));
+    if (window.event && window.event.currentTarget) window.event.currentTarget.classList.add('selected');
+    const qcard = document.getElementById(`qcard-${qid}`);
+    if (qcard) qcard.classList.add('answered');
+
+    updateBreakdown();
+    updateScoreBar();
+  }
+
+  function tierForScore(score) {
+    if (score >= 70) return 'premium';
+    if (score >= 40) return 'mid';
+    return 'std';
+  }
+
+  function showResult() {
+    const score = totalScore();
+    const answered = Object.keys(answers).length;
+    if (answered === 0) { alert('Bitte beantworte zuerst mindestens eine Frage.'); return; }
+
+    const name = (document.getElementById('f_name')?.value || '').trim();
+    const addr = (document.getElementById('f_addr')?.value || '').trim();
+    const phone = (document.getElementById('f_phone')?.value || '').trim();
+    const modules = document.getElementById('f_modules')?.value || 'pv-only';
+    const notes = (document.getElementById('f_notes')?.value || '').trim();
+
+    let title, desc, color, actions;
+    const tier = tierForScore(score);
+
+    const moduleHuman = {
+      'pv-only':'PV',
+      'pv-storage':'PV + Speicher',
+      'pv-ev':'PV + Wallbox/E-Auto',
+      'pv-hp':'PV + Wärmepumpe',
+      'full':'PV + Speicher + Wallbox + WP/Klima',
+      'unknown':'noch unklar'
+    };
+
+    if (tier === 'premium') {
+      color = '#22C55E';
+      title = '🔥 Premium Lead – Termin aktiv setzen';
+      desc = `Score: ${score}/100. Empfehlung: Vor-Ort-/Aufmaß-Termin und persönliches Konzept. Wunschumfang: ${moduleHuman[modules]}.`;
+      actions = [
+        { i:'📅', t:'Termin vereinbaren' },
+        { i:'📐', t:'Aufmaß/Prüfung planen' },
+        { i:'🧠', t:'Individuelles Konzept' },
+        { i:'📞', t:'Heute/sofort nachfassen' }
+      ];
+    } else if (tier === 'mid') {
+      color = '#EAB308';
+      title = '⚡ Standard Plus – Beratung + Angebot mit Optionen';
+      desc = `Score: ${score}/100. Empfehlung: Video-/Telefon-Beratung. Standardangebot + 1–2 Optionen. Wunschumfang: ${moduleHuman[modules]}.`;
+      actions = [
+        { i:'📹', t:'Video-/Telefon-Beratung' },
+        { i:'📄', t:'Standardangebot (mit Optionen)' },
+        { i:'🔔', t:'Nachfassen in 3 Tagen' }
+      ];
+    } else {
+      color = '#EF4444';
+      title = '📄 Standortangebot – Invest nur nach Signal';
+      desc = `Score: ${score}/100. Empfehlung: Standortangebot automatisiert senden. Termin erst bei positiver Rückmeldung. Wunschumfang: ${moduleHuman[modules]}.`;
+      actions = [
+        { i:'📧', t:'Standortangebot senden' },
+        { i:'📬', t:'Einmalig nachfassen' }
+      ];
+    }
+
+    // add customer meta into modal desc subtly
+    const meta = [
+      name ? `Kunde: ${name}` : null,
+      addr ? `Adresse: ${addr}` : null,
+      phone ? `Tel.: ${phone}` : null,
+      notes ? `Notiz: ${notes}` : null
+    ].filter(Boolean).join(' • ');
+
+    const modalDesc = document.getElementById('modalDesc');
+    modalDesc.textContent = meta ? (desc + ' ' + meta) : desc;
+
+    document.getElementById('modalScore').textContent = score;
+    document.getElementById('modalScore').style.color = color;
+    document.getElementById('modalTitle').textContent = title;
+
+    const modalActions = document.getElementById('modalActions');
+    modalActions.innerHTML = '';
+    actions.forEach(a=>{
+      const el = document.createElement('div');
+      el.className = 'modal-tag';
+      el.innerHTML = `<span>${a.i}</span><span>${a.t}</span>`;
+      modalActions.appendChild(el);
+    });
+
+    document.getElementById('resultOverlay').classList.add('show');
+  }
+
+  function closeModal() { document.getElementById('resultOverlay').classList.remove('show'); }
+
+  function resetAll() {
+    if (!confirm('Alles zurücksetzen?')) return;
+    Object.keys(answers).forEach(k=>delete answers[k]);
+    Object.keys(catTotals).forEach(k=>catTotals[k]=0);
+    document.querySelectorAll('.opt-btn').forEach(b=>b.classList.remove('selected'));
+    document.querySelectorAll('.question-card').forEach(c=>c.classList.remove('answered'));
+    updateBreakdown();
+    updateScoreBar();
+
+    // keep customer data (optional). If you want full reset: uncomment below.
+    // ['f_name','f_addr','f_phone','f_notes'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  }
+
+  function toggleScript() {
+    const body = document.getElementById('scriptBody');
+    const toggle = document.getElementById('scriptToggle');
+    const arrow = document.getElementById('scriptArrow');
+    body.classList.toggle('open');
+    toggle.classList.toggle('open');
+    arrow.textContent = body.classList.contains('open') ? '▲' : '▼';
+  }
+
+  document.getElementById('resultOverlay').addEventListener('click', function(e){
+    if (e.target === this) closeModal();
+  });
+
+  // initial
+  updateBreakdown();
+  updateScoreBar();
+</script>
+
+<!-- V3 workflow and PDF upgrade -->
+<style>
+  .pdf-actions { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .btn-pdf { font-size:11px; padding:11px 8px; background:#F5A623; color:#0D0F14; }
+  .btn-pdf:hover { opacity:.9; transform:translateY(-1px); }
+  .multi-note { font-size:10px; color:var(--muted); margin:8px 0 0; }
+  .opt-btn.multi.selected::before { content:'✓'; width:17px; height:17px; display:grid; place-items:center; border-radius:50%; background:var(--gold); color:var(--dark); font-weight:900; flex:0 0 auto; }
+  .opt-btn.multi::before { content:''; width:15px; height:15px; border:1px solid var(--muted); border-radius:4px; flex:0 0 auto; }
+  #pdfReport { display:none; }
+  @media print {
+    @page { size: A4 landscape; margin: 8mm; }
+    body { background:#fff !important; color:#121722 !important; font-family:Inter,Arial,sans-serif !important; }
+    header,.shell { display:none !important; }
+    #pdfReport { display:block !important; }
+    .pdf-page { padding:6mm 8mm 14mm; page-break-after:auto; break-after:auto; }
+    .pdf-page:last-child { page-break-after:auto; }
+    .pdf-head, .pdf-grid, .pdf-score, .pdf-action, .pdf-section-title, .recommendation-ribbon { break-inside:avoid; page-break-inside:avoid; }
+    .pdf-list { break-inside:auto; }
+    .pdf-list-item { break-inside:avoid; page-break-inside:avoid; }
+    .pdf-detail { break-inside:avoid; page-break-inside:avoid; }
+    .pdf-footer { position:fixed; bottom:5mm; left:8mm; right:8mm; }
+    .pdf-head { border-bottom:3px solid #F5A623; padding-bottom:8px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:flex-end; }
+    .pdf-brand { font-weight:900; font-size:18px; letter-spacing:-.5px; }
+    .pdf-title { font-size:25px; font-weight:950; letter-spacing:-1px; }
+    .pdf-sub { font-size:10px; color:#566075; margin-top:3px; }
+    .pdf-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-bottom:12px; }
+    .pdf-box { border:1px solid #dce1ea; border-radius:7px; padding:9px; }
+    .pdf-label { font-size:8px; text-transform:uppercase; letter-spacing:.8px; font-weight:800; color:#697386; margin-bottom:4px; }
+    .pdf-value { font-size:11px; font-weight:700; line-height:1.35; }
+    .pdf-score { background:#121722; color:white; border-radius:8px; padding:13px 15px; display:flex; align-items:center; justify-content:space-between; margin:10px 0 12px; }
+    .pdf-score-number { font-size:38px; font-weight:950; line-height:1; color:#F5A623; }
+    .pdf-score-title { font-size:17px; font-weight:900; }
+    .pdf-action { border-left:4px solid #F5A623; background:#fff7e5; padding:11px 13px; font-size:12px; line-height:1.45; margin-bottom:12px; }
+    .pdf-section-title { font-size:13px; font-weight:950; border-bottom:1px solid #dce1ea; padding:7px 0; margin:10px 0 5px; }
+    .pdf-list { display:grid; grid-template-columns:1fr 1fr; gap:4px 16px; }
+    .pdf-list-item { font-size:10px; padding:5px 0; border-bottom:1px solid #edf0f5; display:flex; justify-content:space-between; gap:10px; }
+    .pdf-list-item b { color:#121722; }
+    .pdf-list-item span { color:#566075; text-align:right; }
+    .pdf-detail { font-size:10px; line-height:1.45; }
+    .pdf-detail h3 { margin:8px 0 3px; font-size:12px; }
+    .pdf-detail h3:not(:first-child) { break-before:avoid; page-break-before:avoid; }
+    .pdf-footer { position:fixed; bottom:6mm; font-size:8px; color:#697386; }
+  }
+</style>
+<script>
+(function(){
+  const serviceOptions = ['PV-Anlage','Stromspeicher','Wallbox / E-Auto','Wärmepumpe','Klimageräte','Notstrom / Ersatzstrom'];
+  // Only one multi-select is intentional: it captures the customer's actual product scope.
+  // The other questions must lead to a distinct sales decision, not ask the same thing twice.
+  const multi = { q5: new Set() };
+  const originalAnswer = window.answer;
+
+  // Customer data: e-mail must travel with every PDF report.
+  document.getElementById('f_phone').insertAdjacentHTML('afterend', `
+    <div class="field"><label for="f_email">E-Mail-Adresse</label><input id="f_email" type="email" placeholder="kunde@beispiel.de" /></div>`);
+  document.getElementById('f_modules').closest('.field').remove();
+
+  // Clear, operational tier logic.
+  document.querySelector('.tier-legend').innerHTML = `
+    <div class="tier-card t-vip"><span class="tier-icon">🔥</span><div class="tier-name" style="color:#22C55E">Premium Lead</div><div class="tier-range" style="color:#22C55E">70–100</div><div class="tier-desc"><b>Sofort:</b> Vor-Ort-Aufmaßtermin setzen. Kostenvoranschlag senden. Danach alle 3–4 Tage nachfassen.</div></div>
+    <div class="tier-card t-mid"><span class="tier-icon">⚡</span><div class="tier-name" style="color:#EAB308">Standard Plus</div><div class="tier-range" style="color:#EAB308">40–69</div><div class="tier-desc"><b>Innerhalb 1–2 Wochen:</b> Videoberatung. Vorab-Kostenvoranschlag aus Google-Daten; bei hoher Reife Vor-Ort-Abstimmung.</div></div>
+    <div class="tier-card t-std"><span class="tier-icon">📄</span><div class="tier-name" style="color:#EF4444">Standardangebot</div><div class="tier-range" style="color:#EF4444">0–39</div><div class="tier-desc">Vorabangebot/Kostenvoranschlag aus Lead- und Adressdaten. Termin erst nach positiver Rückmeldung.</div></div>`;
+
+  // PDF controls.
+  const primary = document.querySelector('.btn-primary');
+  primary.insertAdjacentHTML('afterend', `<div class="pdf-actions"><button class="btn btn-pdf" style="grid-column:1 / -1" onclick="printReport('auto')">🖨 PDF-Auswertung erstellen</button></div>`);
+  document.querySelector('.sidebar').insertAdjacentHTML('beforeend','<div class="multi-note">PDF-Export bündelt Kundendaten, Score, Empfehlung und Antworten. Im Druckdialog: „Als PDF speichern“.</div>');
+
+  // Roof type: a pragmatic prequalification, not a final static or roof inspection.
+  const q1 = document.getElementById('qcard-q1');
+  q1.querySelector('.q-text').textContent = 'Dachart / Montage-Eignung';
+  q1.querySelector('.q-hint').textContent = 'Direkt: „Welche Dachart liegt vor? Ziegel, Flachdach, Blech oder Schiefer?“';
+  q1.querySelector('.q-badge').className = 'q-badge direct-badge'; q1.querySelector('.q-badge').textContent = '🎯 Direkt';
+  q1.querySelector('.options-grid').innerHTML = `
+    <button class="opt-btn" onclick="answer('q1',7,'cat1','Ziegel/Betondach, Trapezblech oder Stehfalzblech')">✅ Ziegel/Betondach oder Blech <span class="opt-pts">+7</span></button>
+    <button class="opt-btn" onclick="answer('q1',6,'cat1','Flachdach (Statik/Abdichtung prüfen)')">✅ Flachdach <span class="opt-pts">+6</span></button>
+    <button class="opt-btn" onclick="answer('q1',2,'cat1','Schieferdach (Sondermontage)')">⚠️ Schieferdach <span class="opt-pts">+2</span></button>
+    <button class="opt-btn" onclick="answer('q1',0,'cat1','Reet- oder Holzschindeldach')">❌ Reet-/Holzschindeldach <span class="opt-pts">+0</span></button>
+    <button class="opt-btn" onclick="answer('q1',4,'cat1','Dachart noch unklar')">🔶 Dachart noch unklar <span class="opt-pts">+4</span></button>`;
+
+  // Ten specific consumption ranges including unknown.
+  const q3 = document.getElementById('qcard-q3');
+  q3.querySelector('.options-grid').innerHTML = [
+    ['Weiß nicht',0],['bis 1.500 kWh',1],['1.501–2.500 kWh',2],['2.501–3.500 kWh',3],['3.501–4.500 kWh',3],['4.501–6.000 kWh',4],['6.001–8.000 kWh',4],['8.001–10.000 kWh',5],['10.001–14.000 kWh',5],['über 14.000 kWh',5]
+  ].map(([label,pts])=>`<button class="opt-btn" onclick="answer('q3',${pts},'cat1','${label}')">${label}<span class="opt-pts">+${pts}</span></button>`).join('');
+
+  function multiMarkup(id, intro, hint){
+    return `<div class="q-top"><div><div class="q-text">${intro}</div><div class="q-hint">${hint}</div></div><span class="q-badge direct-badge">🎯 Mehrfachwahl</span></div><div class="options-grid" id="opts-${id}">${serviceOptions.map(s=>`<button class="opt-btn multi" data-service="${s}" onclick="toggleMulti('${id}','${s}')">${s}</button>`).join('')}<button class="opt-btn multi" data-service="Keines davon" onclick="toggleMulti('${id}','Keines davon')">Keines davon</button></div><div class="multi-note">Mehrere Themen anklicken. „Keines davon“ schließt die übrigen Optionen aus.</div>`;
+  }
+  // One place to record the product scope, once and cleanly.
+  document.getElementById('qcard-q5').innerHTML = multiMarkup('q5','Worum geht es konkret?','Direkt: „Welche Themen sind für Sie interessant?“');
+
+  // q8 now records the actual preliminary PV package size. This is a sales recommendation,
+  // not a final technical layout; roof area, orientation and statics remain mandatory checks.
+  document.getElementById('qcard-q8').innerHTML = `<div class="q-top"><div><div class="q-text">Empfohlene PV-Paketgröße</div><div class="q-hint">Automatische Vorauswahl aus Strombedarf; bei abweichendem Kundenwunsch hier aktiv anpassen. Finale Auslegung nach Dachprüfung.</div></div><span class="q-badge direct-badge">🎯 Paketgröße</span></div><div class="options-grid" id="opts-q8"><button class="opt-btn" onclick="answer('q8',2,'cat3','5 kWp')">5 kWp <span class="opt-pts">Paket</span></button><button class="opt-btn" onclick="answer('q8',3,'cat3','6 kWp')">6 kWp <span class="opt-pts">Paket</span></button><button class="opt-btn" onclick="answer('q8',4,'cat3','8 kWp')">8 kWp <span class="opt-pts">Paket</span></button><button class="opt-btn" onclick="answer('q8',5,'cat3','10 kWp')">10 kWp <span class="opt-pts">Paket</span></button><button class="opt-btn" onclick="answer('q8',6,'cat3','12 kWp')">12 kWp <span class="opt-pts">Paket</span></button><button class="opt-btn" onclick="answer('q8',6,'cat3','15 kWp')">15 kWp <span class="opt-pts">Paket</span></button></div><div class="multi-note">Richtwert: ca. 5–6 m² Dachfläche pro kWp. Dachfläche, Ausrichtung, Verschattung und Statik entscheiden final.</div>`;
+
+  // q12 controls which components go into the package. It is distinct from the customer's
+  // broad interest list: here the staff selects the concrete offer configuration.
+  document.getElementById('qcard-q12').innerHTML = `<div class="q-top"><div><div class="q-text">Paketbausteine für den Kostenvoranschlag</div><div class="q-hint">Anklicken, was als Variante oder feste Position in den Kostenvoranschlag soll.</div></div><span class="q-badge direct-badge">🎯 Mehrfachwahl</span></div><div class="options-grid" id="opts-q12"><button class="opt-btn multi" data-service="Stromspeicher" onclick="togglePackage('Stromspeicher')">Stromspeicher</button><button class="opt-btn multi" data-service="Wallbox" onclick="togglePackage('Wallbox')">Wallbox / E-Auto</button><button class="opt-btn multi" data-service="Notstrom" onclick="togglePackage('Notstrom')">Notstrom / Ersatzstrom</button><button class="opt-btn multi" data-service="Ohne Zusatzbaustein" onclick="togglePackage('Ohne Zusatzbaustein')">Ohne Zusatzbaustein</button></div><div class="multi-note">Speicher, Wallbox und Notstrom sind einzeln oder kombiniert wählbar. „Ohne Zusatzbaustein“ schließt die anderen Optionen aus.</div>`;
+
+  const packageParts = new Set();
+  window.togglePackage = function(item){
+    if(item === 'Ohne Zusatzbaustein') { packageParts.clear(); packageParts.add(item); }
+    else { packageParts.delete('Ohne Zusatzbaustein'); packageParts.has(item) ? packageParts.delete(item) : packageParts.add(item); }
+    document.querySelectorAll('#opts-q12 .opt-btn').forEach(b=>b.classList.toggle('selected', packageParts.has(b.dataset.service)));
+    const pts = packageParts.has('Ohne Zusatzbaustein') ? 1 : Math.min(7, packageParts.size * 2 + 1);
+    const prev = answers.q12; if(prev) catTotals.cat5 -= prev.pts;
+    answers.q12 = {qid:'q12',pts,cat:'cat5',label:[...packageParts].join(', ') || 'keine Zusatzbausteine gewählt'};
+    catTotals.cat5 += pts; document.getElementById('qcard-q12').classList.add('answered'); updateBreakdown(); updateScoreBar();
+  };
+
+  function autoSelectPackageSize(){
+    const consumption = answers.q3?.label || '';
+    if(!consumption) return;
+    let size = '5 kWp';
+    if(/1\.501–2\.500/.test(consumption)) size='6 kWp';
+    else if(/2\.501–3\.500|3\.501–4\.500/.test(consumption)) size='8 kWp';
+    else if(/4\.501–6\.000/.test(consumption)) size='10 kWp';
+    else if(/6\.001–8\.000/.test(consumption)) size='12 kWp';
+    else if(/8\.001|10\.001|über 14/.test(consumption)) size='15 kWp';
+    const current = answers.q8?.label;
+    if(!current || current === 'Automatische Vorauswahl') {
+      const points = {'5 kWp':2,'6 kWp':3,'8 kWp':4,'10 kWp':5,'12 kWp':6,'15 kWp':6}[size];
+      answer('q8',points,'cat3',size);
+      const btn=[...document.querySelectorAll('#opts-q8 .opt-btn')].find(b=>b.textContent.trim().startsWith(size)); if(btn) btn.classList.add('selected');
+    }
+  }
+  const baseAnswer = window.answer;
+  window.answer = function(qid,pts,cat,label){ baseAnswer(qid,pts,cat,label); if(qid==='q3') autoSelectPackageSize(); };
+
+  window.toggleMulti = function(qid, item){
+    const set = multi[qid];
+    if(item === 'Keines davon') { set.clear(); set.add(item); }
+    else { set.delete('Keines davon'); set.has(item) ? set.delete(item) : set.add(item); }
+    document.querySelectorAll(`#opts-${qid} .opt-btn`).forEach(b=>b.classList.toggle('selected', set.has(b.dataset.service)));
+    const count = [...set].filter(x=>x !== 'Keines davon').length;
+    const pts = count >= 3 ? 8 : count === 2 ? 5 : count === 1 ? 3 : 0;
+    // Do not call the original single-choice handler here: it deliberately clears every
+    // button in a group. Multi-select questions manage their own visual state.
+    const cat = 'cat2';
+    const prev = answers[qid];
+    if (prev) catTotals[cat] -= prev.pts;
+    answers[qid] = { qid, pts, cat, label: [...set].join(', ') || 'keine Auswahl' };
+    catTotals[cat] += pts;
+    document.getElementById(`qcard-${qid}`)?.classList.add('answered');
+    updateBreakdown();
+    updateScoreBar();
+  };
+
+  // Competition is a decisive conversion signal: a direct recommendation deserves top priority;
+  // broad price comparisons require an explicit quality-led approach.
+  document.querySelector('#opts-q6').innerHTML = `
+    <button class="opt-btn" onclick="answer('q6',7,'cat2','Empfehlung / kein weiteres Angebot')">🌟 Empfehlung / kein weiteres Angebot <span class="opt-pts">+7</span></button>
+    <button class="opt-btn" onclick="answer('q6',5,'cat2','1–2 Anbieter insgesamt')">✅ 1–2 Anbieter insgesamt <span class="opt-pts">+5</span></button>
+    <button class="opt-btn" onclick="answer('q6',2,'cat2','3–4 Anbieter im Vergleich')">⚠️ 3–4 Anbieter im Vergleich <span class="opt-pts">+2</span></button>
+    <button class="opt-btn" onclick="answer('q6',0,'cat2','5+ Anbieter / klarer Preisvergleich')">🛑 5+ Anbieter / klarer Preisvergleich <span class="opt-pts">+0</span></button>`;
+
+  // Separate usage type - it changes how the sales team frames the package and follow-up.
+  const q1Section = document.getElementById('qcard-q1').closest('.category');
+  const useCard = document.createElement('div');
+  useCard.className = 'question-card'; useCard.id = 'qcard-q13';
+  useCard.innerHTML = `<div class="q-top"><div><div class="q-text">Nutzungsart / Projektmodell</div><div class="q-hint">Direkt: „Geht es um Ihren Privathaushalt, ein Gewerbeobjekt oder um ein Mieterstrom-/GGV-Projekt?“</div></div><span class="q-badge direct-badge">🎯 Direkt</span></div><div class="options-grid cols1" id="opts-q13"><button class="opt-btn" onclick="answer('q13',5,'cat1','Privathaushalt / Eigenverbrauch')">🏠 Privathaushalt / Eigenverbrauch <span class="opt-pts">+5</span></button><button class="opt-btn" onclick="answer('q13',5,'cat1','Gewerbliche Nutzung')">🏢 Gewerbliche Nutzung <span class="opt-pts">+5</span></button><button class="opt-btn" onclick="answer('q13',5,'cat1','Mieterstrom / GGV')">🏘️ Mieterstrom / GGV <span class="opt-pts">+5</span></button><button class="opt-btn" onclick="answer('q13',0,'cat1','Nutzungsart unklar')">❓ Noch unklar <span class="opt-pts">+0</span></button></div>`;
+  q1Section.insertBefore(useCard, document.getElementById('qcard-q2'));
+
+  function customer(){ return {name:document.getElementById('f_name').value.trim()||'–',addr:document.getElementById('f_addr').value.trim()||'–',phone:document.getElementById('f_phone').value.trim()||'–',email:document.getElementById('f_email').value.trim()||'–',notes:document.getElementById('f_notes').value.trim()||'–'}; }
+  function workflow(score){
+    if(score>=70) return {tier:'Premium Lead', accent:'#22C55E', action:'Sofort Vor-Ort-Aufmaßtermin setzen. Kostenvoranschlag senden und nach Versand alle 3–4 Tage aktiv nachfassen.'};
+    if(score>=40) return {tier:'Standard Plus', accent:'#EAB308', action:'Kostenvoranschlag anhand Google-Daten vorbereiten. Videoberatung schnellstmöglich innerhalb 1–2 Wochen vereinbaren. Bei hoher Kaufreife Vor-Ort-Termin zur Abstimmung setzen. Nach Versand alle 3–4 Tage nachfassen.'};
+    return {tier:'Standardangebot', accent:'#EF4444', action:'Vorabangebot/Kostenvoranschlag anhand Lead- und Adressdaten senden. Kein Termin vor einer positiven Rückmeldung; danach Vorabtermin vereinbaren. Nach Versand alle 3–4 Tage nachfassen.'};
+  }
+  function packageRecommendation(){
+    const use = answers.q13?.label || 'Nutzungsart noch offen';
+    const power = answers.q3?.label || 'Strombedarf noch offen';
+    const topics = answers.q5?.label || 'Themen noch offen';
+    const extra = answers.q12?.label || '';
+    let pkg, why, next;
+    if(/Mieterstrom|GGV/.test(use)) { pkg='Mieterstrom-/GGV-Konzept'; why='Mehrparteienstruktur und Abrechnung stehen vor einer Standard-PV-Auslegung. Erst Betreiber-, Zähler- und Abrechnungskonzept prüfen.'; next='Objektstruktur, Zählerplätze, Parteienzahl, Verbrauchsprofile und Betreiberrolle für die Fachplanung aufnehmen.'; }
+    else if(/Gewerb/.test(use)) { pkg='Gewerbe-PV-Konzept'; why='Bei Gewerbe zählt vor allem der Lastgang tagsüber. Die Auslegung richtet sich nach Verbrauchsprofil, Betriebszeiten und Dach-/Netzbedingungen.'; next='Lastgang bzw. Viertelstundenwerte, Betriebszeiten, Dachfläche und Netzanschluss abfragen; Speicher nur bei erkennbarem Mehrwert einplanen.'; }
+    else {
+      const size = answers.q8?.label || 'PV-Größe noch auswählen';
+      const components = answers.q12?.label || 'keine Zusatzbausteine gewählt';
+      const withStorage = /Stromspeicher/.test(components), withWallbox = /Wallbox/.test(components), withBackup = /Notstrom/.test(components);
+      const storageHint = withStorage && /^(5|6|8|10|12|15) kWp$/.test(size) ? ` Speicher-Richtwert: ca. ${size.split(' ')[0]}–${Number(size.split(' ')[0])*1.5} kWh, final nach Verbrauchsprofil.` : '';
+      pkg = `${size}-PV-Paket${withStorage ? ' + Speicher' : ''}${withWallbox ? ' + Wallbox' : ''}${withBackup ? ' + Notstrom/Ersatzstrom' : ''}`;
+      why = `Vorauswahl aus Strombedarf (${power}) und der gewählten Paketgröße. Die Paketbausteine werden bewusst als ${components} in den Kostenvoranschlag aufgenommen.`;
+      next = `Im Angebot darstellen: PV-Anlage ${size}; ${components}. Dachfläche als Richtwert: ca. 5–6 m² pro kWp. Verbrauchsdaten, Dachfläche, Ausrichtung, Verschattung, Statik und Zählerschrank vor der finalen Dimensionierung prüfen.${storageHint}`;
+    }
+    return {pkg,why,next};
+  }
+  const questionNames = {q1:'Dachart / Montage-Eignung',q2:'Dachzustand',q3:'Strombedarf',q4:'Terminbereitschaft',q5:'Interessierte Themen',q6:'Wettbewerbssituation',q7:'Budgetsignal',q8:'PV-Paketgröße',q9:'Entscheider',q10:'Zeithorizont',q11:'Vorbereitung',q12:'Paketbausteine',q13:'Nutzungsart / Projektmodell'};
+  function listAnswers(){ return Object.values(answers).map(a=>`<div class="pdf-list-item"><b>${questionNames[a.qid] || a.qid}</b><span>${a.label} · ${a.pts} P.</span></div>`).join('') || '<div class="pdf-list-item"><span>Noch keine Antworten erfasst.</span></div>'; }
+  function fieldBrief(){
+    const a = id => answers[id]?.label || 'nicht erhoben';
+    const topics = a('q5');
+    const lines = [
+      `<b>Projektbild:</b> ${a('q13')}. Interesse an ${topics}. Strombedarf: ${a('q3')}.`,
+      `<b>Objekt-Check:</b> ${a('q1')}; Dachzustand: ${a('q2')}. Vor verbindlicher Planung bleiben Statik, Verschattung, Dachaufbau und Zählerschrank zu prüfen.`,
+      `<b>Vertriebslage:</b> Terminbereitschaft: ${a('q4')}. Wettbewerb: ${a('q6')}. Budget: ${a('q7')}.`,
+      `<b>Entscheidungsweg:</b> ${a('q9')}; Zielzeitraum: ${a('q10')}; Vorbereitung: ${a('q11')}.`,
+      `<b>Empfehlung für das Angebot:</b> PV-Paket ${a('q8')}. Paketbausteine: ${a('q12')}.`
+    ];
+    return lines.map(x=>`<div class="pdf-detail" style="padding:6px 0;border-bottom:1px solid #edf0f5">${x}</div>`).join('');
+  }
+  function callPlan(score){
+    if(score>=70) return '<b>Termin-Ziel:</b> Aufmaß vor Ort verbindlich setzen. <b>Im Gespräch klären:</b> Dachzugang, Maße/Unterlagen, Zählerschrank und alle Entscheider. <b>Nachfassen:</b> Nach Angebotsversand in 3–4 Tagen mit konkreter Entscheidungshilfe.';
+    if(score>=40) return '<b>Termin-Ziel:</b> Video-Beratung innerhalb von 1–2 Wochen. <b>Im Gespräch klären:</b> Verbrauch, Prioritäten, Investitionsrahmen und Wettbewerb. <b>Nachfassen:</b> Nach Angebotsversand in 3–4 Tagen; bei klarer Kaufreife Vor-Ort-Abstimmung setzen.';
+    return '<b>Termin-Ziel:</b> Noch keinen Termin setzen. <b>Jetzt tun:</b> Vorab-Kostenvoranschlag aus Lead- und Adressdaten senden und eine klare Rückfrage zur Passung stellen. <b>Nachfassen:</b> Nach Angebotsversand in 3–4 Tagen; bei positiver Rückmeldung Vorabtermin vereinbaren.';
+  }
+  window.printReport = function(mode){
+    const score = totalScore(), c = customer(), w = workflow(score), now = new Date().toLocaleDateString('de-DE');
+    const pkg = packageRecommendation(); const summary = `<div class="pdf-page"><div class="pdf-head"><div><div class="pdf-brand">⚡ DAYLUX Energiesysteme</div><div class="pdf-sub">Lead-Qualifizierung · erstellt am ${now}</div></div><div class="pdf-title">Lead-Auswertung</div></div><div class="pdf-grid"><div class="pdf-box"><div class="pdf-label">Kunde</div><div class="pdf-value">${c.name}<br>${c.addr}</div></div><div class="pdf-box"><div class="pdf-label">Kontakt</div><div class="pdf-value">${c.phone}<br>${c.email}</div></div><div class="pdf-box"><div class="pdf-label">Notiz</div><div class="pdf-value">${c.notes}</div></div></div><div class="pdf-score"><div><div class="pdf-score-title">${w.tier}</div><div class="pdf-sub" style="color:#c7cfdf">Lead Score und konkrete nächste Schritte</div></div><div class="pdf-score-number">${score}<span style="font-size:15px;color:#c7cfdf"> / 100</span></div></div><div class="pdf-action"><b>Nächster Schritt:</b> ${w.action}</div><div class="pdf-action" style="background:#eef6ff;border-left-color:#60A5FA"><b>Passende Paketempfehlung: ${pkg.pkg}</b><br>${pkg.why}<br><b>Für den Außendienst:</b> ${pkg.next}</div><div class="pdf-section-title">Außendienst-Briefing</div>${fieldBrief()}<div class="pdf-action" style="background:#eef6ff;border-left-color:#60A5FA"><b>Gesprächsplan:</b> ${callPlan(score)}</div><div class="pdf-section-title">Punkteübersicht</div><div class="pdf-list"><div class="pdf-list-item"><b>Objekt & Machbarkeit</b><span>${catTotals.cat1} / 25</span></div><div class="pdf-list-item"><b>Kauf-/Termin-Signal</b><span>${catTotals.cat2} / 25</span></div><div class="pdf-list-item"><b>Budget & Invest</b><span>${catTotals.cat3} / 20</span></div><div class="pdf-list-item"><b>Entscheider & Timing</b><span>${catTotals.cat4} / 20</span></div><div class="pdf-list-item"><b>Modul-Treffer</b><span>${catTotals.cat5} / 15</span></div></div><div class="pdf-section-title">Erfasste Antworten</div><div class="pdf-list">${listAnswers()}</div><div class="pdf-section-title">Arbeitslogik & Handlungsanweisung</div><div class="pdf-detail"><h3>Standardangebot</h3>Vorabangebot/Kostenvoranschlag ausschließlich aus Lead- und Adressdaten erstellen. Kein Termin vor positiver Kundenrückmeldung. Das Nachfassen erfolgt nach 3–4 Tagen mit der Frage, ob Umfang und Richtung passen; dann erst Vorabtermin setzen.<h3>Standard Plus</h3>Kostenvoranschlag vorab anhand der Google-/Objektdaten vorbereiten. Videoberatung schnellstmöglich, ideal innerhalb von 1–2 Wochen. Im Gespräch Angebotsumfang, Verbrauch, Budget, Entscheider und Wettbewerb konkretisieren. Bei hoher Kaufreife Vor-Ort-Termin zur finalen Abstimmung setzen.<h3>Premium Lead</h3>Aufmaßtermin vor Ort sofort priorisieren. Vorab alle Entscheider einbinden und Fotos, Verbrauchsdaten sowie Zugang/Zählerschrank abfragen. Nach Angebotsversand aktiv im 3–4-Tage-Rhythmus auf die Entscheidung hinführen.</div><div class="pdf-footer">DAYLUX Energiesysteme GmbH · Interne Lead-Qualifizierung · Nachfassrhythmus 3–4 Tage (finale Abstimmung mit Geschäftsführung ausstehend)</div></div>`;
+    const detail = '';
+    let report=document.getElementById('pdfReport'); if(!report){ report=document.createElement('div'); report.id='pdfReport'; document.body.appendChild(report); } report.innerHTML=summary+detail; window.print();
+  };
+
+  // Align modal recommendation with the final operating process.
+  const oldShow = window.showResult;
+  window.showResult = function(){ oldShow(); const s=totalScore(), w=workflow(s), pkg=packageRecommendation(); document.getElementById('modalTitle').textContent = w.tier + ' – empfohlener Ablauf'; document.getElementById('modalDesc').textContent = `Score: ${s}/100. ${w.action}\n\nPaketempfehlung: ${pkg.pkg}. ${pkg.why} Für den Außendienst: ${pkg.next}`; };
+})();
+</script>
+
+<!-- Automatic package engine: derives the offer recommendation from the actual lead inputs. -->
+<style>
+  .auto-package { border-color:rgba(245,166,35,.42); background:linear-gradient(135deg,rgba(245,166,35,.10),rgba(96,165,250,.05)); }
+  .package-hero { display:flex; align-items:center; justify-content:space-between; gap:12px; margin:10px 0; padding:14px; border-radius:10px; background:rgba(13,15,20,.54); }
+  .package-size { color:var(--gold); font-family:'JetBrains Mono',monospace; font-size:26px; font-weight:950; letter-spacing:-1px; }
+  .package-label { font-size:11px; text-transform:uppercase; letter-spacing:1px; color:var(--muted); font-weight:800; }
+  .package-components { display:flex; flex-wrap:wrap; gap:6px; }
+  .package-chip { font-size:11px; font-weight:800; padding:5px 8px; border-radius:99px; background:rgba(255,255,255,.07); border:1px solid var(--border); }
+  .package-engine-note { font-size:11px; line-height:1.55; color:var(--muted); margin-top:10px; }
+  .recommendation-ribbon { margin:12px 0 14px; padding:15px 16px; border-radius:12px; border:1px solid rgba(245,166,35,.55); background:linear-gradient(135deg,rgba(245,166,35,.20),rgba(245,166,35,.06)); box-shadow:0 8px 26px rgba(0,0,0,.16); }
+  .recommendation-ribbon-label { color:var(--gold); font-size:10px; font-weight:950; letter-spacing:1.4px; text-transform:uppercase; margin-bottom:5px; }
+  .recommendation-ribbon-title { font-size:18px; font-weight:950; line-height:1.35; color:var(--text); }
+  .recommendation-ribbon-note { margin-top:6px; color:var(--muted); font-size:11px; line-height:1.5; }
+  @media print { .recommendation-ribbon { background:#fff7e5; border-color:#F5A623; break-inside:avoid; } .recommendation-ribbon-label { color:#9b6200; } .recommendation-ribbon-title { color:#121722; } }
+</style>
+<script>
+(function(){
+  /*
+   * Package engine logic (internal sales pre-qualification):
+   * 1) Base PV size comes from current annual consumption.
+   * 2) Future loads selected by the employee are added as planning reserves.
+   * 3) Storage, wallbox and backup become package components; storage does not inflate kWp.
+   * Final planning always requires roof area, orientation, shading, statics and meter checks.
+   */
+  // Standard sales packages, including larger options for high-consumption households.
+  const packageSizes = [5,6,8,10,12,15,17,20];
+  const baseForUse = (consumption) => {
+    if (/bis 1\.500/.test(consumption)) return 5;
+    if (/1\.501–2\.500/.test(consumption)) return 6;
+    if (/2\.501–3\.500/.test(consumption)) return 8;
+    if (/3\.501–4\.500/.test(consumption)) return 8;
+    if (/4\.501–6\.000/.test(consumption)) return 10;
+    if (/6\.001–8\.000/.test(consumption)) return 12;
+    if (/8\.001–10\.000/.test(consumption)) return 15;
+    if (/10\.001–14\.000/.test(consumption)) return 17;
+    if (/über 14/.test(consumption)) return 20;
+    return 8; // "weiß nicht": neutral preliminary package, visibly marked as provisional
+  };
+  const toPackageSize = (target) => packageSizes.find(x => x >= target) || 20;
+  const topicSet = () => new Set((answers.q5?.label || '').split(', ').filter(Boolean));
+
+  function getAutoPackage(){
+    const consumption = answers.q3?.label || 'Weiß nicht';
+    const topics = topicSet();
+    let target = baseForUse(consumption);
+    const adjustments = [];
+    // Add reserves only where the future load is explicitly selected in the lead conversation.
+    if (topics.has('Wallbox / E-Auto')) { target += 2; adjustments.push('Wallbox: +2 kWp Planungsreserve'); }
+    if (topics.has('Wärmepumpe')) { target += 4; adjustments.push('Wärmepumpe: +4 kWp Planungsreserve'); }
+    if (topics.has('Klimageräte')) { target += 2; adjustments.push('Klimageräte: +2 kWp Planungsreserve'); }
+    // Larger projects can exceed the household base package; the final cap remains a roof and grid check.
+    if (target > 20) { target = 20; adjustments.push('Paketlogik bei 20 kWp gedeckelt – größere Auslegung individuell prüfen'); }
+    const size = toPackageSize(target);
+    const components = [];
+    if (topics.has('Stromspeicher')) {
+      // Daylux package steps: 5 / 7 / 10 / 12 / 15 / 17 / 20 kWh.
+      // Preserve practical limits: no larger than 20 kWh in this package catalog.
+      const storageSteps = [5,7,10,12,15,17,20];
+      const consumptionCap = (() => {
+        if (/bis 1\.500/.test(consumption)) return 5;
+        if (/1\.501–2\.500/.test(consumption)) return 7;
+        if (/2\.501–3\.500|3\.501–4\.500/.test(consumption)) return 10;
+        if (/4\.501–6\.000/.test(consumption)) return 12;
+        if (/6\.001–8\.000/.test(consumption)) return 15;
+        if (/8\.001–10\.000/.test(consumption)) return 17;
+        return 20;
+      })();
+      const pvCap = Math.min(20, size * 1.5);
+      const suggested = Math.min(consumptionCap, pvCap);
+      const storage = storageSteps.find(x => x >= suggested) || 20;
+      components.push(`${storage} kWh Stromspeicher`);
+    }
+    if (topics.has('Wallbox / E-Auto')) components.push('Wallbox');
+    if (topics.has('Wärmepumpe')) components.push('Wärmepumpen-Integration / Verbrauchsprüfung');
+    if (topics.has('Klimageräte')) components.push('Klimaanlagen-Konzept');
+    if (topics.has('Notstrom / Ersatzstrom')) components.push('Notstrom-/Ersatzstromfunktion');
+    const provisional = consumption === 'Weiß nicht';
+    return { size, consumption, components, adjustments, provisional, topics };
+  }
+
+  function renderAutoPackage(){
+    const rec = getAutoPackage();
+    const card = document.getElementById('qcard-q8');
+    if (!card) return;
+    const chips = rec.components.length ? rec.components.map(x=>`<span class="package-chip">${x}</span>`).join('') : '<span class="package-chip">PV ohne Zusatzbaustein</span>';
+    const adjustmentText = rec.adjustments.length ? `Berücksichtigt: ${rec.adjustments.join(' · ')}.` : 'Keine zusätzlichen Verbrauchstreiber ausgewählt.';
+    card.className = 'question-card auto-package answered';
+    card.innerHTML = `<div class="q-top"><div><div class="q-text">Automatische Paketempfehlung</div><div class="q-hint">Erstellt aus Stromverbrauch und den unter „Worum geht es konkret?“ gewählten Themen.</div></div><span class="q-badge direct-badge">⚡ Automatik</span></div><div class="package-hero"><div><div class="package-label">Vorauswahl für den Kostenvoranschlag</div><div class="package-size">${rec.size} kWp</div></div><div class="package-components">${chips}</div></div><div class="package-engine-note"><b>${rec.provisional ? 'Vorläufige Empfehlung:' : 'Berechnungslogik:'}</b> Basis: ${rec.consumption} Jahresverbrauch. ${adjustmentText} Finale Auslegung erst nach Prüfung von Dachfläche (ca. 5–6 m²/kWp), Ausrichtung, Verschattung, Statik und Zählerschrank.</div>`;
+    // q8 is derived information and must not artificially increase the lead score.
+    if (answers.q8) { catTotals.cat3 -= answers.q8.pts; delete answers.q8; updateBreakdown(); updateScoreBar(); }
+    const oldQ12 = document.getElementById('qcard-q12');
+    // q12 belonged to the former manual package selection. Remove it completely so it
+    // cannot conflict with the automatic package calculation.
+    if (answers.q12) { catTotals.cat5 -= answers.q12.pts; delete answers.q12; updateBreakdown(); updateScoreBar(); }
+    if(oldQ12){ oldQ12.style.display='none'; }
+  }
+
+  // The only product choice remains q5. Every click there re-generates the package immediately.
+  const existingToggleMulti = window.toggleMulti;
+  window.toggleMulti = function(qid,item){ existingToggleMulti(qid,item); if(qid==='q5') renderAutoPackage(); };
+  const existingAnswer = window.answer;
+  window.answer = function(qid,pts,cat,label){ existingAnswer(qid,pts,cat,label); if(qid==='q3' || qid==='q13') setTimeout(renderAutoPackage,0); };
+
+  // Replace manual package selectors with a read-only calculated recommendation.
+  renderAutoPackage();
+  const firstPackageCard = document.getElementById('qcard-q8');
+  if(firstPackageCard) firstPackageCard.classList.remove('answered');
+
+  // Make the same automatic recommendation available to the modal and to both PDF variants.
+  const previousPackageRecommendation = window.packageRecommendation;
+  window.packageRecommendation = function(){
+    const rec = getAutoPackage();
+    const use = answers.q13?.label || 'Nutzungsart noch offen';
+    if (/Mieterstrom|GGV/.test(use)) return { pkg:'Mieterstrom-/GGV-Konzept', why:`Die automatische ${rec.size}-kWp-Vorauswahl dient nur als Größenindikator. Bei Mieterstrom/GGV bestimmen Zähler-, Betreiber- und Abrechnungskonzept die Auslegung.`, next:'Parteienzahl, Zählerplätze, Verbrauchsprofile und Betreiberrolle für die Fachplanung aufnehmen.' };
+    if (/Gewerb/.test(use)) return { pkg:`Gewerbe-PV-Konzept – Startwert ${rec.size} kWp`, why:`Der Startwert basiert auf ${rec.consumption}; gewählte Verbrauchstreiber: ${rec.adjustments.join(', ') || 'keine'}. Finale Leistung über Lastgang und Betriebszeiten dimensionieren.`, next:`Angebotsvariante: ${rec.size} kWp${rec.components.length?' + '+rec.components.join(' + '):''}. Lastgang, Betriebszeiten, Dachfläche und Netzanschluss einholen.` };
+    return { pkg:`${rec.size}-kWp-PV-Paket${rec.components.length?' + '+rec.components.join(' + '):''}`, why:`Basis: ${rec.consumption}. ${rec.adjustments.join(' · ') || 'Keine zusätzlichen Verbrauchstreiber ausgewählt.'}`, next:`Kostenvoranschlag mit ${rec.size} kWp${rec.components.length?' sowie '+rec.components.join(', '):' ohne Zusatzbaustein'} vorbereiten. Finale Dimensionierung nach Dach- und Verbrauchsprüfung.` };
+  };
+  window.renderAutoPackage = renderAutoPackage;
+
+  function recommendationRibbon(){
+    const p = window.packageRecommendation();
+    return `<div class="recommendation-ribbon"><div class="recommendation-ribbon-label">⚡ Empfohlenes Angebotspaket</div><div class="recommendation-ribbon-title">${p.pkg}</div><div class="recommendation-ribbon-note">${p.why}<br><b>Umsetzung:</b> ${p.next}</div></div>`;
+  }
+
+  // Make the recommendation impossible to miss in the on-screen result.
+  const currentShowResult = window.showResult;
+  window.showResult = function(){
+    currentShowResult();
+    setTimeout(()=>{
+      const modal = document.querySelector('#resultOverlay .modal');
+      if(!modal || modal.querySelector('.recommendation-ribbon')) return;
+      const anchor = document.getElementById('modalDesc');
+      if(anchor) anchor.insertAdjacentHTML('afterend', recommendationRibbon());
+    },0);
+  };
+
+  // The existing PDF builder invokes window.print immediately. Inject the highlighted
+  // package card just before the browser opens its print dialogue.
+  const nativePrint = window.print.bind(window);
+  window.print = function(){
+    const report = document.getElementById('pdfReport');
+    if(report && !report.querySelector('.recommendation-ribbon')){
+      const scoreBlock = report.querySelector('.pdf-score');
+      if(scoreBlock) scoreBlock.insertAdjacentHTML('afterend', recommendationRibbon());
+    }
+    nativePrint();
+  };
+})();
+</script>
+</body>
+</html>
